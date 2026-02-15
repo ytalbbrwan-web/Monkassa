@@ -1,34 +1,50 @@
-from flask import Flask, request
-import requests
 import os
+import requests
+from flask import Flask, request
 
 app = Flask(__name__)
 
-TOKEN = os.environ.get("BOT_TOKEN")
-API = f"https://api.telegram.org/bot{TOKEN}"
+TOKEN = os.getenv("BOT_TOKEN")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
-# الصفحة الرئيسية
-@app.route("/")
-def home():
-    return "Monkassa AI running"
+TELEGRAM_URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-# هنا يستقبل تيليغرام الرسائل
+def ask_ai(message):
+    url = "https://api.openai.com/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {OPENAI_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "gpt-4.1-mini",
+        "messages": [
+            {"role": "system", "content": "أنت مساعد ذكي لمتجر أحذية نسائية، تساعد الزبونات وتتكلم بلطف وتبيع باحتراف."},
+            {"role": "user", "content": message}
+        ]
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    return response.json()["choices"][0]["message"]["content"]
+
 @app.route("/webhook", methods=["POST"])
-def telegram_webhook():
-    data = request.get_json()
+def webhook():
+    data = request.json
 
-    if data and "message" in data:
+    if "message" in data:
         chat_id = data["message"]["chat"]["id"]
         text = data["message"].get("text", "")
 
-        reply = f"استلمت: {text}"
+        reply = ask_ai(text)
 
-        requests.post(f"{API}/sendMessage", json={
+        requests.post(TELEGRAM_URL, json={
             "chat_id": chat_id,
             "text": reply
         })
 
     return "ok"
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+@app.route("/")
+def home():
+    return "Bot running"
