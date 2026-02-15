@@ -5,23 +5,25 @@ import os
 app = Flask(__name__)
 
 TOKEN = os.environ.get("BOT_TOKEN")
-URL = f"https://api.telegram.org/bot{TOKEN}"
+API = f"https://api.telegram.org/bot{TOKEN}"
 
+# الصفحة الرئيسية
 @app.route("/")
 def home():
-    return "Bot is running"
+    return "Monkassa AI running"
 
-@app.route("/", methods=["POST"])
-def webhook():
+# هنا يستقبل تيليغرام الرسائل
+@app.route("/webhook", methods=["POST"])
+def telegram_webhook():
     data = request.get_json()
 
-    if "message" in data:
+    if data and "message" in data:
         chat_id = data["message"]["chat"]["id"]
         text = data["message"].get("text", "")
 
-        reply = "وصلتني رسالتك 👍"
+        reply = f"استلمت: {text}"
 
-        requests.post(f"{URL}/sendMessage", json={
+        requests.post(f"{API}/sendMessage", json={
             "chat_id": chat_id,
             "text": reply
         })
@@ -29,5 +31,4 @@ def webhook():
     return "ok"
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
