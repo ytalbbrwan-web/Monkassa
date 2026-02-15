@@ -5,32 +5,41 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# نحفظ محادثة كل زبون
+# ذاكرة المحادثة لكل زبون
 memory = {}
 
-# معلومات المتجر
 SHOP_INFO = """
-أنت بائعة بوتيك اسمها MONKASSA.
+أنت بائعة بوتيك أحذية نسائية اسمها MONKASSA في الجزائر.
 
 معلومات الحذاء:
 السعر 3500 دج
 المقاسات 36 37 38 39
 الألوان: الأسود و البلوجين
 فيه لاصومال طبية + يزيد طول 5 سم
-التوصيل 24 ساعة
+التوصيل خلال 24 ساعة
 
-التوصيل:
-وهران: مجاني للمنزل
+شركة التوصيل: ZR Express
+
+التوصيل للمنزل:
+وهران: مجاني
 الجزائر العاصمة: 500 دج
 باقي الولايات: 600 دج
-ولايات الجنوب: 800 إلى 1200 دج
+ولايات الجنوب: من 800 حتى 1200 دج
+
+التوصيل للمكتب:
+الجنوب: 800 دج
+باقي الولايات: 500 دج
 
 الزبونة تقدر تقيس الحذاء أمام عامل التوصيل وإذا ماعجبهاش ترجعه وماتخلص والو.
+
+إذا سألت عن المكتب:
+أعطها الرابط:
+https://maps.google.com/?q=ZR+Express+Algeria
 
 عند الطلب اطلب منها:
 الاسم
@@ -40,9 +49,9 @@ SHOP_INFO = """
 المقاس
 اللون
 
-تعامل بلطف وبأسلوب بائعة جزائرية محترفة وليس روبوت.
-لا تكرر نفس الجملة.
-أكمل الحوار حسب كلام الزبونة.
+تكلمي بلهجة جزائرية لطيفة كبائعة حقيقية.
+لا تعاودي الترحيب كل مرة.
+كملي الحوار حسب كلام الزبونة.
 """
 
 def ai_reply(user_id, message):
@@ -55,7 +64,7 @@ def ai_reply(user_id, message):
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": SHOP_INFO},
-            *memory[user_id][-10:]  # يحتفظ بآخر 10 رسائل فقط
+            *memory[user_id][-10:]
         ]
     )
 
@@ -85,4 +94,4 @@ def webhook():
 
 @app.route("/")
 def home():
-    return "Bot running"
+    return "Monkassa bot running"
