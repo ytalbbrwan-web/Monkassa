@@ -1,72 +1,58 @@
 import os import requests from flask import Flask, request, jsonify from openai import OpenAI
 
-app = Flask(name)
+=====================
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN") OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+ENV VARIABLES
+
+=====================
+
+TELEGRAM_TOKEN = os.getenv("BOT_TOKEN") OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-SYSTEM_PROMPT = """ أنتِ بائعة في متجر أحذية نسائية اسمه "زايا".
+app = Flask(name)
 
-شخصيتك:
+SYSTEM_PROMPT = """ أنت بائعة حقيقية في بوتيك أحذية نسائية اسمه MONKASSA. تتكلمين مع الزبونة بأسلوب لطيف وقصير مثل بائعة متجر وليس روبوت. لا تذكر أبداً أنك ذكاء اصطناعي.
 
-لبقة وودودة مثل بائعة بوتيك
+السعر: 35000 دج المقاسات: 36 / 37 / 38 / 39 الألوان: الأسود - البلوجين نعل طبي + يزيد الطول 5 سم
 
-لا تتكلمين كثيراً
+نبيع أونلاين مع توصيل وهران: مجاني الجزائر العاصمة: 500 دج باقي الولايات حسب المنطقة
 
-تقنعين الزبونة بدون إزعاج
+يمكن القياس أمام عامل التوصيل وإذا لم يناسب يرجع بدون دفع
 
-تفهمين احتياجها وتقترحين المناسب
+عند الطلب اطلبي: رقم الهاتف + الولاية + البلدية + المقاس + اللون
 
+الردود قصيرة وطبيعية مثل بائعة محل """
 
-قواعد مهمة:
+=====================
 
-إذا قالت مرحبا → رحبي باختصار
+TELEGRAM SEND MESSAGE
 
-إذا سألت عن حذاء → اسألي سؤالاً واحداً لتحديد احتياجها
+=====================
 
-لا تعطي خيارات كثيرة
+def send_message(chat_id, text): url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage" requests.post(url, json={ "chat_id": chat_id, "text": text })
 
-ركزي على الراحة والأناقة
+=====================
 
-لا تقولي أنك ذكاء اصطناعي
+AI RESPONSE
 
-لا تخرج عن مجال الأحذية النسائية
+=====================
 
+def ask_ai(user_message): response = client.chat.completions.create( model="gpt-4.1-mini", messages=[ {"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_message} ], temperature=0.7 ) return response.choices[0].message.content
 
-هدفك: مساعدة الزبونة تختار الحذاء المناسب ثم تشجيعها على الشراء. """
+=====================
 
-def send_message(chat_id, text): url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage" data = {"chat_id": chat_id, "text": text} requests.post(url, json=data)
+WEBHOOK
 
-@app.route("/", methods=["GET"]) def home(): return "Bot is running"
+=====================
 
-@app.route("/webhook", methods=["POST"]) def webhook(): data = request.get_json()
+@app.route("/webhook", methods=["POST"]) def webhook(): data = request.get_json() if "message" in data: chat_id = data["message"]["chat"]["id"] text = data["message"].get("text", "")
 
-if "message" not in data:
-    return jsonify({"ok": True})
+ai_reply = ask_ai(text)
+    send_message(chat_id, ai_reply)
 
-chat_id = data["message"]["chat"]["id"]
-user_message = data["message"].get("text", "")
-
-if not user_message:
-    return jsonify({"ok": True})
-
-try:
-    response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message}
-        ]
-    )
-
-    reply = response.choices[0].message.content.strip()
-
-except Exception as e:
-    reply = "حدث خطأ بسيط، جربي مرة أخرى 💕"
-    print(e)
-
-send_message(chat_id, reply)
 return jsonify({"ok": True})
 
-if name == "main": port = int(os.environ.get("PORT", 10000)) app.run(host="0.0.0.0", port=port)
+@app.route("/", methods=["GET"]) def home(): return "Monkassa bot running"
+
+if name == "main": app.run(host="0.0.0.0", port=10000)
