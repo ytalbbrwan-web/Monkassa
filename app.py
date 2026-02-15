@@ -1,79 +1,72 @@
 import os
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from openai import OpenAI
 
 app = Flask(__name__)
 
-TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-client = OpenAI(api_key=OPENAI_KEY)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ذاكرة لكل زبونة
-user_memory = {}
+# نحفظ محادثة كل زبون
+memory = {}
 
-def ask_ai(user_id, user_text):
+# معلومات المتجر
+SHOP_INFO = """
+أنت بائعة بوتيك اسمها MONKASSA.
 
-    # أول مرة تتكلم الزبونة
-    if user_id not in user_memory:
-        user_memory[user_id] = [
-            {
-                "role": "system",
-                "content": """
-أنت بائعة في بوتيك أحذية نسائية اسمها MONKASSA.
-
-تكلمي بدارجة جزائرية طبيعية و قصيرة.
-ماتعاوديش الترحيب كل مرة.
-كملي الحوار حسب كلام الزبونة فقط.
-
-المعلومات:
-السعر: 3500 دج
-المقاسات: 36 37 38 39
-الألوان: أسود و بلوجين
-الحذاء فيه لاصومال طبية + يزيد 5 سم طول
+معلومات الحذاء:
+السعر 3500 دج
+المقاسات 36 37 38 39
+الألوان: الأسود و البلوجين
+فيه لاصومال طبية + يزيد طول 5 سم
 التوصيل 24 ساعة
 
 التوصيل:
-وهران: مجاني
-الجزائر: 500 دج للدار
-معظم الولايات: 600 دج
-الجنوب: بين 800 و 1200
+وهران: مجاني للمنزل
+الجزائر العاصمة: 500 دج
+باقي الولايات: 600 دج
+ولايات الجنوب: 800 إلى 1200 دج
 
-إذا أرادت الطلب اطلب:
+الزبونة تقدر تقيس الحذاء أمام عامل التوصيل وإذا ماعجبهاش ترجعه وماتخلص والو.
+
+عند الطلب اطلب منها:
 الاسم
 رقم الهاتف
 الولاية
-اللون
+البلدية
 المقاس
+اللون
 
-إذا سألت التجريب:
-تقدر تقيسه قدام الليفرور وإذا ماعجبكش ترجعيه بلا مصاريف
-
-لا تقولي مرحبا في كل رسالة، فقط أول مرة.
+تعامل بلطف وبأسلوب بائعة جزائرية محترفة وليس روبوت.
+لا تكرر نفس الجملة.
+أكمل الحوار حسب كلام الزبونة.
 """
-            }
-        ]
 
-    # نضيف كلام الزبونة
-    user_memory[user_id].append({"role": "user", "content": user_text})
+def ai_reply(user_id, message):
+    if user_id not in memory:
+        memory[user_id] = []
+
+    memory[user_id].append({"role": "user", "content": message})
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=user_memory[user_id]
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": SHOP_INFO},
+            *memory[user_id][-10:]  # يحتفظ بآخر 10 رسائل فقط
+        ]
     )
 
     reply = response.choices[0].message.content
-
-    # نحفظ رد البائعة
-    user_memory[user_id].append({"role": "assistant", "content": reply})
-
+    memory[user_id].append({"role": "assistant", "content": reply})
     return reply
 
 
-@app.route("/", methods=["GET"])
-def home():
-    return "Monkassa bot running"
+def send_message(chat_id, text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    requests.post(url, json={"chat_id": chat_id, "text": text})
 
 
 @app.route("/webhook", methods=["POST"])
@@ -81,19 +74,15 @@ def webhook():
     data = request.json
 
     if "message" in data:
-        chat_id = str(data["message"]["chat"]["id"])
+        chat_id = data["message"]["chat"]["id"]
         text = data["message"].get("text", "")
 
-        if text:
-            reply = ask_ai(chat_id, text)
+        reply = ai_reply(chat_id, text)
+        send_message(chat_id, reply)
 
-            requests.post(
-                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-                json={"chat_id": chat_id, "text": reply}
-            )
-
-    return jsonify({"ok": True})
+    return "ok"
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+@app.route("/")
+def home():
+    return "Bot running"
