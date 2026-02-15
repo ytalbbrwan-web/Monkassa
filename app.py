@@ -1,38 +1,33 @@
+import os
+from flask import Flask, request
 import requests
-import time
 
-TOKEN = "7973029583:AAHLIdAGHx4pGsb7V4f6us3JdUcs5hncXPM"
+app = Flask(__name__)
 
-URL = f"https://api.telegram.org/bot{TOKEN}/"
+TOKEN = os.environ.get("BOT_TOKEN")
+URL = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-def get_updates(offset=None):
-    r = requests.get(URL + "getUpdates", params={"timeout": 100, "offset": offset})
-    return r.json()
+@app.route("/")
+def home():
+    return "Monkassa AI running"
 
-def send_message(chat_id, text):
-    requests.get(URL + "sendMessage", params={"chat_id": chat_id, "text": text})
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.json
 
-def handle(update):
-    if "message" not in update:
-        return
-    message = update["message"]
-    chat_id = message["chat"]["id"]
-    text = message.get("text", "")
+    if "message" in data:
+        chat_id = data["message"]["chat"]["id"]
+        text = data["message"].get("text", "")
 
-    # رد البوت
-    if text == "/start":
-        send_message(chat_id, "أهلا 👋 أنا Monkassa AI")
-    else:
-        send_message(chat_id, "قلت: " + text)
+        reply = "وصلت رسالتك: " + text
 
-def main():
-    offset = None
-    while True:
-        updates = get_updates(offset)
-        if updates["ok"]:
-            for update in updates["result"]:
-                offset = update["update_id"] + 1
-                handle(update)
-        time.sleep(1)
+        requests.post(URL, json={
+            "chat_id": chat_id,
+            "text": reply
+        })
 
-main()
+    return "ok"
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
