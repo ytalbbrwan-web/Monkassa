@@ -91,14 +91,21 @@ def telegram_webhook():
 
     # WORKING HOURS
     now = datetime.now().hour
-    # اوقات العمل
-from datetime import datetime
+    @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
+def telegram_webhook():
 
-now = datetime.now()
-hour = now.hour
+    data = request.get_json()
 
-# خارج اوقات العمل = اسكت فقط
-if not (10 <= hour < 23):
+    if "message" not in data:
+        return "ok"
+
+    chat_id = data["message"]["chat"]["id"]
+    text = data["message"].get("text", "")
+
+    # الرد بالذكاء الاصطناعي مباشرة (بدون توقيت)
+    reply = ask_ai(text)
+    send_message(chat_id, reply)
+
     return "ok"
 
     reply = ai_reply(text)
