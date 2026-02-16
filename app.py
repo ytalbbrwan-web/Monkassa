@@ -69,7 +69,7 @@ def ai_reply(text):
         return "سمحيلي ما فهمتش مليح 😅"
 
 # ================== TELEGRAM ==================
-@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
+@app.route("/telegram", methods=["POST"])
 def telegram_webhook():
     global bot_enabled
 
