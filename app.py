@@ -1,123 +1,142 @@
 import os
 import requests
-from flask import Flask, request
-from openai import OpenAI
 from datetime import datetime
+from flask import Flask, request
 
 app = Flask(__name__)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# ================== ENV ==================
+TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+OWNER_ID = str(os.environ.get("OWNER_ID"))
+PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
+VERIFY_TOKEN = "monkassa_verify_123"
 
-client = OpenAI(api_key=OPENAI_API_KEY)
-telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
-# ---------------- وقت العمل ----------------
-def is_night():
-    h = datetime.now().hour
-    return h >= 23 or h < 10
+# ================== STATE ==================
+bot_enabled = True
 
-# ---------------- ارسال رسالة ----------------
-def send(chat_id,text):
-    requests.post(telegram_url,json={"chat_id":chat_id,"text":text})
+# ================== AI ==================
+def ai_reply(text):
 
-# ---------------- رابط المكتب ----------------
-def office_map_link(text):
-    words=text.split()
-    for w in words:
-        if len(w)>3:
-            return f"https://www.google.com/maps/search/ZR+Express+{w}"
-    return None
-
-# ---------------- حساب التوصيل ----------------
-home_600=["مستغانم","الشلف","البليدة","باتنة","عنابة","سوق اهراس","تموشنت","تلمسان","بلعباس","تيسمسيلت","تيزي وزو","بجاية","البويرة","تبسة","تيارت","جيجل","سطيف","سعيدة","سكيكدة","قالمة","قسنطينة","المدية","بومرداس","خنشلة","ميلة","ام البواقي","عين الدفلى","الطارف","غليزان"]
-home_800=["بشار","الاغواط","بسكرة","الجلفة","ورقلة","البيض","الوادي","توقرت"]
-home_1200=["ادرار","تمنراست","اولاد جلال","عين صالح","تيميمون","بني عباس","المغير"]
-
-def delivery_price(msg):
-    for w in home_600:
-        if w in msg:
-            return "🚚 التوصيل للدار 600 دج\n🏢 للمكتب 500 دج عبر ZR Express"
-
-    for w in home_800:
-        if w in msg:
-            return "🚚 التوصيل للدار 800 دج\n🏢 للمكتب 500 دج عبر ZR Express"
-
-    for w in home_1200:
-        if w in msg:
-            return "🚚 التوصيل للدار 1200 دج\n🏢 للمكتب 800 دج عبر ZR Express"
-
-    if "الجزائر" in msg:
-        return "🚚 التوصيل للدار 500 دج\n🏢 للمكتب 500 دج"
-
-    if "وهران" in msg:
-        return "🚚 التوصيل مجاني للدار 🎁\n🏢 للمكتب 500 دج"
-
-    return None
-
-# ---------------- AI الرد ----------------
-def ai_reply(msg):
-
-    # مكتب
-    if "مكتب" in msg:
-        link=office_map_link(msg)
-        if link:
-            return f"تقدري تروحي لأقرب مكتب ZR Express 📍\n{link}"
-
-    # حساب التوصيل
-    price=delivery_price(msg)
-    if price:
-        return price
-
-    # ذكاء اصطناعي
-    response=client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role":"system","content":"""
-أنت بائعة جزائرية في بوتيك MONKASSA.
-جاوبي باحتراف وبدون إطالة.
+    prompt = f"""
+أنت بائعة في بوتيك أحذية نسائية اسمها MONKASSA في الجزائر.
 
 المعلومات:
-معناش محل نخدمو أونلاين بتوصيل 
 السعر 3500 دج
-مقاسات 36/37/38/39
-الألوان الأسود والبلوجين
-لاصومال طبية +5سم طول
+المقاسات 36 37 38 39
+الألوان الأسود و البلوجين
+الحذاء فيه لاصومال طبية ويزيد 5 سم طول
 التوصيل 24 ساعة
-القياس عند الاستلام وارجاع مجاني
+
+توصيل للدار:
+وهران مجاني
+الجزائر 500 دج
+الشمال 600 دج
+الجنوب 800 الى 1200 دج
+
+توصيل للمكتب:
+الشمال 500 دج
+الجنوب 800 دج
 
 إذا حبت تطلب:
-اطلبي الاسم + الرقم + الولاية + البلدية + المقاس + اللون
-"""},
+اطلبي الاسم + الهاتف + الولاية + البلدية + المقاس + اللون
 
-            {"role":"user","content":msg}
-        ],
-        temperature=0.6
-    )
+جاوبي باختصار و بلهجة جزائرية بدون تكرار الترحيب
 
-    return response.choices[0].message.content
+رسالة الزبون:
+{text}
+"""
 
-# ---------------- Webhook ----------------
-@app.route("/webhook",methods=["POST"])
-def webhook():
-    data=request.get_json()
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-    if "message" not in data:
+    data = {
+        "model": "gpt-4.1-mini",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+
+    try:
+        return r.json()["choices"][0]["message"]["content"]
+    except:
+        return "سمحيلي ما فهمتش مليح 😅"
+
+# ================== TELEGRAM ==================
+@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
+def telegram_webhook():
+    global bot_enabled
+
+    update = request.json
+    message = update.get("message", {})
+    chat_id = str(message.get("chat", {}).get("id"))
+    text = message.get("text", "")
+
+    # OWNER CONTROL
+    if chat_id == OWNER_ID:
+        if text.lower() == "off":
+            bot_enabled = False
+            send_tg(chat_id, "تم إطفاء البوت 🔴")
+            return "ok"
+        if text.lower() == "on":
+            bot_enabled = True
+            send_tg(chat_id, "تم تشغيل البوت 🟢")
+            return "ok"
+
+    # WORKING HOURS
+    now = datetime.now().hour
+    if not bot_enabled or not (now >= 23 or now < 10):
+        send_tg(chat_id, "نخدمو من 23:00 حتى 10:00 🌙")
         return "ok"
 
-    chat_id=data["message"]["chat"]["id"]
-    text=data["message"].get("text","")
-
-    if not is_night():
-        return "ok"
-
-    reply=ai_reply(text)
-    send(chat_id,reply)
+    reply = ai_reply(text)
+    send_tg(chat_id, reply)
     return "ok"
 
+def send_tg(chat_id, text):
+    requests.post(f"{TELEGRAM_API}/sendMessage", json={"chat_id": chat_id, "text": text})
+
+# ================== FACEBOOK VERIFY ==================
+@app.route("/facebook", methods=["GET"])
+def verify():
+    if request.args.get("hub.verify_token") == VERIFY_TOKEN:
+        return request.args.get("hub.challenge")
+    return "Verification failed"
+
+# ================== FACEBOOK MESSAGES ==================
+@app.route("/facebook", methods=["POST"])
+def facebook_webhook():
+    data = request.json
+
+    for entry in data.get("entry", []):
+        for messaging in entry.get("messaging", []):
+            sender = messaging["sender"]["id"]
+
+            if "message" in messaging and "text" in messaging["message"]:
+                text = messaging["message"]["text"]
+                reply = ai_reply(text)
+                send_fb(sender, reply)
+
+    return "ok"
+
+def send_fb(recipient_id, text):
+    url = f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
+    payload = {
+        "recipient": {"id": recipient_id},
+        "message": {"text": text}
+    }
+    requests.post(url, json=payload)
+
+# ================== HEALTH ==================
 @app.route("/")
 def home():
-    return "BOT RUNNING"
+    return "Monkassa bot running"
 
-if __name__=="__main__":
-    app.run(host="0.0.0.0",port=10000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
