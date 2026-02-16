@@ -41,7 +41,7 @@ def delivery_price(msg):
 
     for w in home_800:
         if w in msg:
-            return "🚚 التوصيل للدار 800 دج\n🏢 للمكتب 800 دج عبر ZR Express"
+            return "🚚 التوصيل للدار 800 دج\n🏢 للمكتب 500 دج عبر ZR Express"
 
     for w in home_1200:
         if w in msg:
