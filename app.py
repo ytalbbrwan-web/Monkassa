@@ -11,97 +11,104 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OWNER_ID = 1950592877
 
 client = OpenAI(api_key=OPENAI_API_KEY)
-
 telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-# حالة البوت
-bot_enabled = True
+# ----- الولايات -----
 
-def is_night_time():
-    now = datetime.now().hour
-    return now >= 23 or now < 10
+home_600 = ["مستغانم","الشلف","البليدة","باتنة","عنابة","سوق اهراس","تموشنت","تلمسان","بلعباس","تيسمسيلت","تيزي وزو","بجاية","البويرة","تبسة","تيارت","جيجل","سطيف","سعيدة","سكيكدة","قالمة","قسنطينة","المدية","بومرداس","خنشلة","ميلة","ام البواقي","عين الدفلى","الطارف","غليزان"]
 
-def send(chat_id, text):
-    requests.post(telegram_url, json={
-        "chat_id": chat_id,
-        "text": text
-    })
+home_800 = ["بشار","الاغواط","بسكرة","الجلفة","ورقلة","البيض","الوادي","توقرت"]
 
-def ai_reply(user_text):
+home_1200 = ["ادرار","تمنراست","اولاد جلال","عين صالح","تيميمون","بني عباس","المغير"]
+
+south = home_800 + home_1200
+
+def delivery_price(text):
+
+    for w in home_600:
+        if w in text:
+            return "سعر التوصيل للدار 600 دج 🚚\nوللمكتب 500 دج عبر ZR Express"
+
+    for w in home_800:
+        if w in text:
+            return "سعر التوصيل للدار 800 دج 🚚\nوللمكتب 800 دج عبر ZR Express"
+
+    for w in home_1200:
+        if w in text:
+            return "سعر التوصيل للدار 1200 دج 🚚\nوللمكتب 800 دج عبر ZR Express"
+
+    if "الجزائر" in text:
+        return "التوصيل للدار 500 دج 🚚\nوللمكتب 500 دج"
+
+    if "وهران" in text:
+        return " التوصيل للدار مجاني "
+
+    return None
+
+# ----- وقت العمل -----
+def is_night():
+    h = datetime.now().hour
+    return h >= 23 or h < 10
+
+def send(chat_id,text):
+    requests.post(telegram_url,json={"chat_id":chat_id,"text":text})
+
+# ----- AI -----
+def ai_reply(msg):
+
+    price = delivery_price(msg)
+    if price:
+        return price
+
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": """
-أنت بائعة محترفة في بوتيك أحذية MONKASSA في الجزائر.
-تتكلمي بدارجة جزائرية لطيفة و مقنعة.
-ما تعاوديش الترحيب كل مرة.
-جاوبي مباشرة حسب سؤال الزبونة.
+            {
+                "role":"system",
+                "content":"""
+أنت بائعة جزائرية في بوتيك MONKASSA.
+تكلمي بدارجة احترافية قصيرة.
+ما تعاوديش مرحبا كل مرة.
 
 المعلومات:
 السعر 3500 دج
-المقاسات 36 37 38 39
-الألوان: الأسود و البلوچين
-نبيع أونلاين مع توصيل
-
-وهران: توصيل مجاني للدار
-العاصمة: 500 دج للدار
-باقي الولايات شمال: 600 دج
-باقي الولايات توصيل مكتب: 500 دج
-الجنوب دار: 1200 دج
- ولايات الجنوب للمكتب :800 دج
+لاصومال طبية +5سم
+مقاسات 36/37/38/39
+الألوان الأسود والبلوجين
 التوصيل 24 ساعة
-القياس قدام الدليفري و إذا ماعجبش ترجعه بلا ماتخلص
+يمكن القياس عند الاستلام وارجاعه مجانا
 
-إذا حبت تطلب: اطلب منها
-الاسم
-الرقم
-الولاية
-البلدية
-اللون
-المقاس
-            """},
-            {"role": "user", "content": user_text}
-        ]
+إذا حبت تطلب:
+اطلبي الاسم + الرقم + الولاية + البلدية + اللون + المقاس
+"""
+            },
+            {"role":"user","content":msg}
+        ],
+        temperature=0.6
     )
     return response.choices[0].message.content
 
-@app.route("/", methods=["GET"])
-def home():
-    return "BOT RUNNING"
-
-@app.route("/webhook", methods=["POST"])
+# ----- Webhook -----
+@app.route("/webhook",methods=["POST"])
 def webhook():
-    global bot_enabled
-
-    data = request.get_json()
+    data=request.get_json()
 
     if "message" not in data:
         return "ok"
 
-    chat_id = data["message"]["chat"]["id"]
-    user_id = data["message"]["from"]["id"]
-    text = data["message"].get("text", "")
+    chat_id=data["message"]["chat"]["id"]
+    text=data["message"].get("text","")
 
-    # أوامر المالك
-    if user_id == OWNER_ID:
-        if text == "/off":
-            bot_enabled = False
-            send(chat_id, "تم إطفاء الرد الآلي 🔴")
-            return "ok"
-
-        if text == "/on":
-            bot_enabled = True
-            send(chat_id, "تم تشغيل الرد الآلي 🟢")
-            return "ok"
-
-    # التوقيت
-    if not bot_enabled or not is_night_time():
+    if not is_night():
         return "ok"
 
-    reply = ai_reply(text)
-    send(chat_id, reply)
-
+    reply=ai_reply(text)
+    send(chat_id,reply)
     return "ok"
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+@app.route("/")
+def home():
+    return "working"
+
+if __name__=="__main__":
+    app.run(host="0.0.0.0",port=10000)
