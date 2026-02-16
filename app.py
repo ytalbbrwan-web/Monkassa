@@ -91,9 +91,15 @@ def telegram_webhook():
 
     # WORKING HOURS
     now = datetime.now().hour
-    if not bot_enabled or not (now >= 23 or now < 10):
-        send_tg(chat_id, "نخدمو من 23:00 حتى 10:00 🌙")
-        return "ok"
+    # اوقات العمل
+from datetime import datetime
+
+now = datetime.now()
+hour = now.hour
+
+# خارج اوقات العمل = اسكت فقط
+if not (10 <= hour < 23):
+    return "ok"
 
     reply = ai_reply(text)
     send_tg(chat_id, reply)
