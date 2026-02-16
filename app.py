@@ -76,18 +76,7 @@ def telegram_webhook():
     update = request.json
     message = update.get("message", {})
     chat_id = str(message.get("chat", {}).get("id"))
-    text = message.get("text", "")
-
-    # OWNER CONTROL
-    if chat_id == OWNER_ID:
-        if text.lower() == "off":
-            bot_enabled = False
-            send_tg(chat_id, "تم إطفاء البوت 🔴")
-            return "ok"
-        if text.lower() == "on":
-            bot_enabled = True
-            send_tg(chat_id, "تم تشغيل البوت 🟢")
-            return "ok"
+    text = message.get("text", ""
 
     # WORKING HOURS
     now = datetime.now().hour
