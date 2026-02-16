@@ -2,96 +2,106 @@ import os
 import requests
 from flask import Flask, request
 from openai import OpenAI
+from datetime import datetime
 
 app = Flask(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OWNER_ID = 1950592877
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ذاكرة المحادثة لكل زبون
-memory = {}
+telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-SHOP_INFO = """
-أنت بائعة بوتيك أحذية نسائية اسمها MONKASSA في الجزائر.
+# حالة البوت
+bot_enabled = True
 
-معلومات الحذاء:
-السعر 3500 دج
-المقاسات 36 37 38 39
-الألوان: الأسود و البلوجين
-فيه لاصومال طبية + يزيد طول 5 سم
-التوصيل خلال 24 ساعة
+def is_night_time():
+    now = datetime.now().hour
+    return now >= 23 or now < 10
 
-شركة التوصيل: ZR Express
+def send(chat_id, text):
+    requests.post(telegram_url, json={
+        "chat_id": chat_id,
+        "text": text
+    })
 
-التوصيل للمنزل:
-وهران: مجاني
-الجزائر العاصمة: 500 دج
-باقي الولايات: 600 دج
-ولايات الجنوب: من 800 حتى 1200 دج
-
-التوصيل للمكتب:
-الجنوب: 800 دج
-باقي الولايات: 500 دج
-
-الزبونة تقدر تقيس الحذاء أمام عامل التوصيل وإذا ماعجبهاش ترجعه وماتخلص والو.
-
-إذا سألت عن المكتب:
-أعطها الرابط:
-https://maps.google.com/?q=ZR+Express+Algeria
-
-عند الطلب اطلب منها:
-الاسم
-رقم الهاتف
-الولاية
-البلدية
-المقاس
-اللون
-
-تكلمي بلهجة جزائرية لطيفة كبائعة حقيقية.
-لا تعاودي الترحيب كل مرة.
-كملي الحوار حسب كلام الزبونة.
-"""
-
-def ai_reply(user_id, message):
-    if user_id not in memory:
-        memory[user_id] = []
-
-    memory[user_id].append({"role": "user", "content": message})
-
+def ai_reply(user_text):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": SHOP_INFO},
-            *memory[user_id][-10:]
+            {"role": "system", "content": """
+أنت بائعة محترفة في بوتيك أحذية MONKASSA في الجزائر.
+تتكلمي بدارجة جزائرية لطيفة و مقنعة.
+ما تعاوديش الترحيب كل مرة.
+جاوبي مباشرة حسب سؤال الزبونة.
+
+المعلومات:
+السعر 3500 دج
+المقاسات 36 37 38 39
+الألوان: الأسود و البلوچين
+نبيع أونلاين مع توصيل
+
+وهران: توصيل مجاني للدار
+العاصمة: 500 دج للدار
+باقي الولايات شمال: 600 دج
+الجنوب مكتب: 800 دج
+الجنوب دار: 1200 دج
+
+التوصيل 24 ساعة
+القياس قدام الدليفري و إذا ماعجبش ترجعه بلا ماتخلص
+
+إذا حبت تطلب: اطلب منها
+الاسم
+الرقم
+الولاية
+البلدية
+اللون
+المقاس
+            """},
+            {"role": "user", "content": user_text}
         ]
     )
+    return response.choices[0].message.content
 
-    reply = response.choices[0].message.content
-    memory[user_id].append({"role": "assistant", "content": reply})
-    return reply
-
-
-def send_message(chat_id, text):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    requests.post(url, json={"chat_id": chat_id, "text": text})
-
+@app.route("/", methods=["GET"])
+def home():
+    return "BOT RUNNING"
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.json
+    global bot_enabled
 
-    if "message" in data:
-        chat_id = data["message"]["chat"]["id"]
-        text = data["message"].get("text", "")
+    data = request.get_json()
 
-        reply = ai_reply(chat_id, text)
-        send_message(chat_id, reply)
+    if "message" not in data:
+        return "ok"
+
+    chat_id = data["message"]["chat"]["id"]
+    user_id = data["message"]["from"]["id"]
+    text = data["message"].get("text", "")
+
+    # أوامر المالك
+    if user_id == OWNER_ID:
+        if text == "/off":
+            bot_enabled = False
+            send(chat_id, "تم إطفاء الرد الآلي 🔴")
+            return "ok"
+
+        if text == "/on":
+            bot_enabled = True
+            send(chat_id, "تم تشغيل الرد الآلي 🟢")
+            return "ok"
+
+    # التوقيت
+    if not bot_enabled or not is_night_time():
+        return "ok"
+
+    reply = ai_reply(text)
+    send(chat_id, reply)
 
     return "ok"
 
-
-@app.route("/")
-def home():
-    return "Monkassa bot running"
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
