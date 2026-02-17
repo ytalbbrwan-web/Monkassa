@@ -146,19 +146,18 @@ if text_lower in all_wilayas:
 🏢 للمكتب: {office} دج""")
     return "ok"
 
-    if home:
-        send_message(chat_id,
-                     f"""🚚 اسعار التوصيل لولاية {text}
+    if text_lower in all_wilayas:
+    home, office = get_delivery_price(text_lower)
+    send_message(chat_id, f"""🚚 التوصيل لولاية {text}
 
 🏠 للمنزل: {home} دج
 🏢 للمكتب: {office} دج""")
-        return "ok"
+    return "ok"
 
     # AI fallback
     send_message(chat_id, ai_reply(text))
     return "ok"
-
-# # ================= ROOT =================
+# ================= ROOT =================
 
 @app.route("/")
 def home():
