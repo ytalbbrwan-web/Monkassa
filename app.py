@@ -138,15 +138,7 @@ all_wilayas = [
 "أدرار","تمنراست","إليزي","تندوف","بشار","غرداية","ورقلة","الأغواط","الوادي"
 ]
 
-if text_lower in all_wilayas:
-    home, office = get_delivery_price(text_lower)
-    send_message(chat_id, f"""🚚 اسعار التوصيل لولاية {text}
-
-🏠 للمنزل: {home} دج
-🏢 للمكتب: {office} دج""")
-    return "ok"
-
-    if text_lower in all_wilayas:
+ if text_lower in all_wilayas:
     home, office = get_delivery_price(text_lower)
     send_message(chat_id, f"""🚚 التوصيل لولاية {text}
 
