@@ -76,7 +76,7 @@ def telegram_webhook():
     update = request.json
     message = update.get("message", {})
     chat_id = str(message.get("chat", {}).get("id"))
-    text = message.get("text", ""
+    text = message.get("text", "")
 
     # WORKING HOURS
     now = datetime.now().hour
