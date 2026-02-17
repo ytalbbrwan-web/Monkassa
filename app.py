@@ -69,24 +69,28 @@ def ai_reply(text):
         return "سمحيلي ما فهمتش مليح 😅"
 
 # ================== TELEGRAM ==================
-@app.route("/telegram", methods=["POST"])
+@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def telegram_webhook():
-    global bot_enabled
-
-    update = request.json
-    message = update.get("message", {})
-    chat_id = str(message.get("chat", {}).get("id"))
-    text = message.get("text", "")
-
-    # WORKING HOURS
-    now = datetime.now().hour
-    @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
-def telegram_webhook():
-
     data = request.get_json()
 
-    if "message" not in data:
+    if not data or "message" not in data:
         return "ok"
+
+    message = data["message"]
+    chat_id = message["chat"]["id"]
+    text = message.get("text", "").lower()
+
+    # رد ذكي
+    if "سلام" in text or "مرحبا" in text:
+        send_message(chat_id, "مرحبا بك 👋 كيف نقدر نعاونك ؟")
+
+    elif "سعر" in text:
+        send_message(chat_id, "اكتب الولاية تاعك باش نحسبلك السعر مع التوصيل 📦")
+
+    else:
+        send_message(chat_id, "اكتب 'سعر' أو 'طلب' باش نعاونك 😊")
+
+    return "ok"
 
     chat_id = data["message"]["chat"]["id"]
     text = data["message"].get("text", "")
