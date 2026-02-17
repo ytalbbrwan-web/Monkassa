@@ -1,6 +1,6 @@
 import os 
-import requests from
-flask import Flask, request
+import requests 
+from flask import Flask, request
 
 app = Flask(name)
 
@@ -8,48 +8,27 @@ app = Flask(name)
 
 TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN") OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
-# ================== PRODUCT ==================
+# ================== PRODUCT (MONKASSA ONLY) ==================
 
-PRODUCT_PRICE = "3500 دج" PRODUCT_COLORS = "الأسود و البلوجين" PRODUCT_SIZES = "36 / 37 / 38 / 39"
+PRODUCT_NAME = "Monkassa" PRODUCT_PRICE = "3500 دج" PRODUCT_COLORS = "أسود / بلوجين" PRODUCT_SIZES = "36 / 37 / 38 / 39"
 
-# ================== DELIVERY PRICES ==================
+# ================== DELIVERY ==================
 
-HOME_DELIVERY = {"east": 60, "west": 60, "center": 80, "south": 120} OFFICE_DELIVERY_DEFAULT = 50 OFFICE_DELIVERY_SOUTH = 120 OFFICE_DELIVERY_FREE = ["وهران", "oran"]
+HOME_DELIVERY = {"east": 60, "west": 60, "center": 80, "south": 120} OFFICE_DEFAULT = 50 OFFICE_SOUTH = 120 OFFICE_FREE = ["وهران", "oran"]
 
-# ================== REGIONS ==================
+EAST = ["سطيف","عنابة","قسنطينة","جيجل","سكيكدة","باتنة","تبسة","خنشلة","الطارف","سوق اهراس"] WEST = ["وهران","تلمسان","سيدي بلعباس","معسكر","غليزان","البيض","النعامة","عين تموشنت"] CENTER = ["الجزائر","البليدة","تيبازة","بومرداس","المدية","عين الدفلى","الشلف","تيزي وزو","البويرة"] SOUTH = ["أدرار","تمنراست","إليزي","تندوف","بشار","غرداية","ورقلة","الأغواط","الوادي"] ALL_WILAYAS = EAST + WEST + CENTER + SOUTH
 
-east = ["سطيف","عنابة","قسنطينة","جيجل","سكيكدة","باتنة","تبسة","خنشلة","الطارف","سوق اهراس"] west = ["وهران","تلمسان","سيدي بلعباس","معسكر","غليزان","البيض","النعامة","عين تموشنت"] center = ["الجزائر","البليدة","تيبازة","بومرداس","المدية","عين الدفلى","الشلف","تيزي وزو","البويرة"] south = ["أدرار","تمنراست","إليزي","تندوف","بشار","غرداية","ورقلة","الأغواط","الوادي"] all_wilayas = east + west + center + south
+# ================== HELPERS ==================
 
-def get_region(wilaya): wilaya = wilaya.lower() if wilaya in east: return "east" if wilaya in west: return "west" if wilaya in center: return "center" if wilaya in south: return "south" return "center"
+def region_of(w): w = w.lower() if w in EAST: return "east" if w in WEST: return "west" if w in SOUTH: return "south" return "center"
 
-def get_delivery_price(wilaya): if wilaya.lower() in OFFICE_DELIVERY_FREE: office = 0 elif get_region(wilaya) == "south": office = OFFICE_DELIVERY_SOUTH else: office = OFFICE_DELIVERY_DEFAULT region = get_region(wilaya) home = HOME_DELIVERY[region] return home, office
+def delivery_price(wilaya): region = region_of(wilaya) home = HOME_DELIVERY[region] if wilaya.lower() in OFFICE_FREE: office = 0 elif region == "south": office = OFFICE_SOUTH else: office = OFFICE_DEFAULT return home, office
 
-# ================== TELEGRAM SEND ==================
-
-def send_message(chat_id, text): requests.post(f"{TELEGRAM_API}/sendMessage", json={"chat_id": chat_id, "text": text})
+def send(chat_id, text): requests.post(f"{TELEGRAM_API}/sendMessage", json={"chat_id": chat_id, "text": text})
 
 # ================== AI ==================
 
-def ai_reply(text): if not OPENAI_API_KEY: return "مرحبا 👋 تحبي تعرفي السعر ولا التوصيل؟"
-
-headers = {
-    "Authorization": f"Bearer {OPENAI_API_KEY}",
-    "Content-Type": "application/json"
-}
-
-data = {
-    "model": "gpt-4.1-mini",
-    "messages": [
-        {"role":"system","content":"أنت بائعة جزائرية في متجر أحذية Monkassa. نبيعو موديل واحد فقط اسمو Monkassa وماكاش أنواع أخرى. جاوبي بجمل قصيرة بزاف. ما تكتبيش فقرات. تكلمي كيما بائعة حقيقية. دائما حاولي توصلي للطلب. اسألي الزبونة: المقاس؟ الولاية؟ اللون؟ اذا سقصات على موديلات اخرى قولي متوفر غير Monkassa. ممنوع تشرح بزاف."},
-        {"role":"user","content": text}
-    ]
-}
-
-try:
-    r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data, timeout=20)
-    return r.json()["choices"][0]["message"]["content"]
-except:
-    return "قوليلي المقاس و الولاية 😊"
+def ai_reply(text): if not OPENAI_API_KEY: return "مرحبا 🌸 نبيعو فقط حذاء Monkassa. تحبي تعرفي السعر ولا التوصيل؟" headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"} data = { "model": "gpt-4.1-mini", "messages": [ {"role": "system", "content": "انت بائعة جزائرية تبيع موديل واحد فقط اسمه Monkassa. الرد يكون قصير جدا (سطرين كحد اقصى) ومباشر للبيع."}, {"role": "user", "content": text} ] } r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data) try: return r.json()["choices"][0]["message"]["content"] except: return "نبيعو فقط Monkassa 👟 تحبي السعر ولا التوصيل؟"
 
 # ================== WEBHOOK ==================
 
@@ -57,34 +36,36 @@ except:
 
 chat_id = data["message"]["chat"]["id"]
 text = data["message"].get("text", "")
-text_lower = text.lower()
+t = text.lower()
 
-# PRODUCT INFO
-if "سعر" in text_lower or "ثمن" in text_lower:
-    send_message(chat_id, f"💰 سعر مونكاصا: {PRODUCT_PRICE}")
+# PRICE
+if "سعر" in t or "ثمن" in t:
+    send(chat_id, f"💰 سعر {PRODUCT_NAME}: {PRODUCT_PRICE}")
     return "ok"
 
-if "لون" in text_lower:
-    send_message(chat_id, f"🎨 الألوان المتوفرة: {PRODUCT_COLORS}")
+# COLORS
+if "لون" in t:
+    send(chat_id, f"🎨 الألوان: {PRODUCT_COLORS}")
     return "ok"
 
-if "مقاس" in text_lower:
-    send_message(chat_id, f"📏 المقاسات: {PRODUCT_SIZES}")
+# SIZES
+if "مقاس" in t or any(x in t for x in ["36","37","38","39"]):
+    send(chat_id, f"📏 المقاسات المتوفرة: {PRODUCT_SIZES}")
     return "ok"
 
 # DELIVERY ASK
-if "توصيل" in text_lower:
-    send_message(chat_id, "اكتب اسم ولايتك 📍")
+if "توصيل" in t:
+    send(chat_id, "اكتب اسم ولايتك 📍")
     return "ok"
 
 # WILAYA PRICE
-if text_lower in all_wilayas:
-    home, office = get_delivery_price(text_lower)
-    send_message(chat_id, f"🚚 التوصيل لولاية {text}\n🏠 للمنزل: {home} دج\n🏢 للمكتب: {office} دج")
+if t in ALL_WILAYAS:
+    home, office = delivery_price(t)
+    send(chat_id, f"🚚 توصيل {t}\n🏠 منزل: {home} دج\n🏢 مكتب: {office} دج")
     return "ok"
 
-# AI fallback
-send_message(chat_id, ai_reply(text))
+# AI
+send(chat_id, ai_reply(text))
 return "ok"
 
 # ================== ROOT ==================
