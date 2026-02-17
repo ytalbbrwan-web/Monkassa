@@ -80,11 +80,18 @@ def ai_reply(text):
         return "مرحبا 🌸 تحبي تعرفي السعر ولا التوصيل؟"
 
 # ================= WEBHOOK =================
+from threading import Thread
+
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def telegram_webhook():
     data = request.json
+
     if "message" not in data:
         return "ok"
+
+    Thread(target=process_message, args=(data,)).start()
+
+    return "ok"
 
     chat_id = data["message"]["chat"]["id"]
     text = data["message"].get("text", "")
