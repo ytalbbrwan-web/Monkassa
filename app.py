@@ -91,16 +91,17 @@ def handle_message(text):
         price = delivery_price(word)
         if price:
             return f"🚚 اسعار التوصيل لولاية {word}\n{price}"
-    if "توصيل" in text_lower or "شحن" in text_lower:
+    
+if "توصيل" in text_lower or "شحن" in text_lower:
         return "اكتب اسم ولايتك 📍"
 
-    if "سعر" in text_lower or "ثمن" in text_lower:
+if "سعر" in text_lower or "ثمن" in text_lower:
         return f"💰 سعر {PRODUCT_NAME}: {PRODUCT_PRICE}"
 
-    if "لون" in text_lower or "الوان" in text_lower:
+if "لون" in text_lower or "الوان" in text_lower:
         return f"🎨 الالوان المتوفرة: {PRODUCT_COLORS}"
 
-    if "مقاس" in text_lower or "مقاسات" in text_lower:
+if "مقاس" in text_lower or "مقاسات" in text_lower:
         return f"📏 المقاسات: {PRODUCT_SIZES}"
 
     return ai_reply(text)
