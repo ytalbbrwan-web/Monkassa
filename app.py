@@ -88,9 +88,9 @@ def handle_message(text):
     text_lower = text.lower()
 
     for word in text.split():
-    price = delivery_price(word)
-    if price:
-        return f"🚚 اسعار التوصيل لولاية {word}\n{price}"
+        price = delivery_price(word)
+        if price:
+            return f"🚚 اسعار التوصيل لولاية {word}\n{price}"
     if "توصيل" in text_lower or "شحن" in text_lower:
         return "اكتب اسم ولايتك 📍"
 
