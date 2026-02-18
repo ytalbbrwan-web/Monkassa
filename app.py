@@ -120,15 +120,14 @@ def telegram_webhook():
 # ================= FACEBOOK VERIFY =================
 @app.route("/facebook", methods=["GET"])
 def facebook_verify():
-
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
     if mode == "subscribe" and token == "monkassa_verify":
-        return Response(challenge, status=200, mimetype="text/plain")
+        return challenge, 200
 
-    return Response("error", status=403)
+    return "error", 403
 
 # ================= FACEBOOK RECEIVE =================
 @app.route("/facebook", methods=["POST"])
