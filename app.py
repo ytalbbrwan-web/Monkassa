@@ -99,21 +99,21 @@ def handle_message(text):
         return f"💰 سعر {PRODUCT_NAME}: {PRODUCT_PRICE}"
 
 # ===== اختيار اللون مباشرة =====
-if "بلوجين" in text_lower:
-    return "متوفر بلوجين 👌 اكتب اسمك + الولاية + رقم الهاتف للحجز 📦"
+    if "بلوجين" in text_lower:
+        return "متوفر بلوجين 👌 اكتب اسمك + الولاية + رقم الهاتف للحجز 📦"
 
-if "اسود" in text_lower or "أسود" in text_lower:
-    return "متوفر أسود 🖤 اكتب اسمك + الولاية + رقم الهاتف للحجز 📦"
+    if "اسود" in text_lower or "أسود" in text_lower:
+        return "متوفر أسود 🖤 اكتب اسمك + الولاية + رقم الهاتف للحجز 📦"
 
 # ===== المقاسات =====
-if "مقاس" in text_lower or "مقاسات" in text_lower:
-    return f"📏 المقاسات: {PRODUCT_SIZES}"
+    if "مقاس" in text_lower or "مقاسات" in text_lower:
+        return f"📏 المقاسات: {PRODUCT_SIZES}"
 
 # ===== سؤال عن الالوان =====
-if "لون" in text_lower or "الوان" in text_lower:
-    return f"🎨 الالوان المتوفرة: {PRODUCT_COLORS}"
+    if "لون" in text_lower or "الوان" in text_lower:
+        return f"🎨 الالوان المتوفرة: {PRODUCT_COLORS}"
 
-return ai_reply(text)
+    return ai_reply(text)
 
 # ========= TELEGRAM WEBHOOK =========
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
