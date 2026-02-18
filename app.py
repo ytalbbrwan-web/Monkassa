@@ -82,7 +82,7 @@ def ai_reply(text):
 # ================= WEBHOOK =================
 from threading import Thread
 
-@app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
+@app.route(f"/{TELEGRAM_TOKEN}", methods=["GET","POST"])
 def telegram_webhook():
     data = request.json
 
