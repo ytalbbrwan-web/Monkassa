@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, request
+from flask import Flask, request, Response
 
 app = Flask(__name__)
 
@@ -8,8 +8,7 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
-FB_VERIFY_TOKEN = os.environ.get("FB_VERIFY_TOKEN")
-VERIFY_TOKEN = "monkassa_verify"
+
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
 # ========= PRODUCT =========
@@ -49,25 +48,31 @@ def delivery_price(wilaya):
 
     return None
 
-# ========= TELEGRAM =========
+# ========= SEND TELEGRAM =========
 def tg_send(chat_id, text):
-    requests.post(f"{TELEGRAM_API}/sendMessage", json={"chat_id": chat_id, "text": text})
-
-# ========= FACEBOOK =========
-def fb_send(psid, text):
-    url = f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}"
-    requests.post(url, json={"recipient": {"id": psid}, "message": {"text": text}})
+    requests.post(f"{TELEGRAM_API}/sendMessage", json={
+        "chat_id": chat_id,
+        "text": text
+    })
 
 # ========= AI =========
 def ai_reply(user_text):
+
     if not OPENAI_API_KEY:
         return "مرحبا 👋 كيف نقدر نعاونك؟"
 
-    headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
     data = {
         "model": "gpt-4.1-mini",
         "messages": [
-            {"role": "system", "content": "انت بائعة جزائرية في متجر أحذية نسائية اسمه Monkassa. نبيع فقط هذا الحذاء واقنعي الزبونة باختصار."},
+            {
+                "role": "system",
+                "content": "انت بائعة جزائرية في متجر أحذية نسائية اسمه Monkassa. نبيع فقط هذا الحذاء. اقنعي الزبونة بالشراء باختصار."
+            },
             {"role": "user", "content": user_text}
         ]
     }
@@ -112,18 +117,20 @@ def telegram_webhook():
     tg_send(chat_id, handle_message(text))
     return "ok"
 
-# ================= FACEBOOK WEBHOOK =================
-
+# ================= FACEBOOK VERIFY =================
 @app.route("/facebook", methods=["GET"])
 def facebook_verify():
-    verify_token = request.args.get("hub.verify_token")
+
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
-    if verify_token == "monkassa_verify":
-        return challenge
-    return "verification failed"
+    if mode == "subscribe" and token == "monkassa_verify":
+        return Response(challenge, status=200, mimetype="text/plain")
 
+    return Response("error", status=403)
 
+# ================= FACEBOOK RECEIVE =================
 @app.route("/facebook", methods=["POST"])
 def facebook_webhook():
     data = request.json
@@ -138,8 +145,7 @@ def facebook_webhook():
 
             if "message" in msg and "text" in msg["message"]:
                 text = msg["message"]["text"]
-
-                reply = ai_reply(text)
+                reply = handle_message(text)
 
                 requests.post(
                     f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}",
