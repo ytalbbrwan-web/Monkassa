@@ -96,7 +96,7 @@ def handle_message(text):
         return "اكتب اسم ولايتك 📍"
 
     if "سعر" in text_lower or "ثمن" in text_lower:
-    return f"💰 سعر {PRODUCT_NAME}: {PRODUCT_PRICE}"
+        return f"💰 سعر {PRODUCT_NAME}: {PRODUCT_PRICE}"
 
 # ===== اختيار اللون مباشرة =====
 if "بلوجين" in text_lower:
