@@ -112,24 +112,43 @@ def telegram_webhook():
     tg_send(chat_id, handle_message(text))
     return "ok"
 
-# ========= FACEBOOK VERIFY =========
-@app.route("/webhook", methods=["GET"])
-def verify():
-    if request.args.get("hub.verify_token") == FB_VERIFY_TOKEN:
-        return request.args.get("hub.challenge")
-    return "error"
+# ================= FACEBOOK WEBHOOK =================
 
-# ========= FACEBOOK RECEIVE =========
-@app.route("/webhook", methods=["POST"])
-def fb_webhook():
+@app.route("/facebook", methods=["GET"])
+def facebook_verify():
+    verify_token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+
+    if verify_token == "monkassa_verify":
+        return challenge
+    return "verification failed"
+
+
+@app.route("/facebook", methods=["POST"])
+def facebook_webhook():
     data = request.json
-    if data.get("object") == "page":
-        for entry in data.get("entry", []):
-            for msg in entry.get("messaging", []):
-                if msg.get("message") and msg["message"].get("text"):
-                    psid = msg["sender"]["id"]
-                    reply = handle_message(msg["message"]["text"])
-                    fb_send(psid, reply)
+
+    if "entry" not in data:
+        return "ok"
+
+    for entry in data["entry"]:
+        for msg in entry.get("messaging", []):
+
+            sender = msg["sender"]["id"]
+
+            if "message" in msg and "text" in msg["message"]:
+                text = msg["message"]["text"]
+
+                reply = ai_reply(text)
+
+                requests.post(
+                    f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}",
+                    json={
+                        "recipient": {"id": sender},
+                        "message": {"text": reply}
+                    }
+                )
+
     return "ok"
 
 # ========= ROOT =========
