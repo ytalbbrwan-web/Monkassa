@@ -148,9 +148,21 @@ def process_message(data):
         )
         return
 
-    # ذكاء اصطناعي
-    reply = ai_reply(text)
-    send_message(chat_id, reply)
+    # ======== SMART REPLY FILTER ========
+
+known_words = [
+"سعر","ثمن","بكم",
+"لون","الوان",
+"مقاس","مقاسات","36","37","38","39",
+"توصيل","شحن","delivery"
+]
+
+if any(word in text_lower for word in known_words):
+    send_message(chat_id, "ممكن توضحي أكثر؟ 🌸")
+else:
+    send_message(chat_id, ai_reply(text))
+
+return "ok"
 
 # ================= ROOT =================
 
