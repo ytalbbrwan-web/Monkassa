@@ -98,6 +98,17 @@ def telegram_webhook():
     text = data["message"].get("text","")
     text_lower = text.lower()
 
+   # ===== التوصيل حسب الولاية =====
+    price = delivery_price(text)
+    if price:
+        send_message(chat_id, f"🚚 اسعار التوصيل لولاية {text}\n{price}")
+        return "ok"
+
+    # ===== سؤال عن التوصيل =====
+    if "توصيل" in text_lower or "شحن" in text_lower:
+        send_message(chat_id,"اكتب اسم ولايتك 📍")
+        return "ok"
+
     # ===== السعر =====
     if "سعر" in text_lower or "ثمن" in text_lower:
         send_message(chat_id, f"💰 سعر {PRODUCT_NAME}: {PRODUCT_PRICE}")
@@ -105,13 +116,14 @@ def telegram_webhook():
 
     # ===== الالوان =====
     if "لون" in text_lower or "الوان" in text_lower:
-        send_message(chat_id, f"🎨 الألوان المتوفرة: {PRODUCT_COLORS}")
+        send_message(chat_id, f"🎨 الالوان المتوفرة: {PRODUCT_COLORS}")
         return "ok"
 
     # ===== المقاسات =====
-    if "مقاس" in text_lower or "قياس" in text_lower:
+    if "مقاس" in text_lower or "مقاسات" in text_lower:
         send_message(chat_id, f"📏 المقاسات: {PRODUCT_SIZES}")
         return "ok"
+      
 
     # ===== طلب التوصيل =====
     if "توصيل" in text_lower or "شحن" in text_lower:
