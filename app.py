@@ -1,13 +1,13 @@
 import os
 import requests
-from flask import Flask, request, Response
+from flask import Flask, request
 
 app = Flask(__name__)
 
-# ========= ENV =========
+# ========= TOKENS =========
 TELEGRAM_TOKEN = os.environ.get("BOT_TOKEN")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
@@ -18,37 +18,28 @@ PRODUCT_COLORS = "الأسود و البلوجين"
 PRODUCT_SIZES = "36 / 37 / 38 / 39"
 
 # ========= DELIVERY =========
-SPECIAL_800 = ["المغير","تقرت","توڨرت"]
-SOUTH_1200 = ["ادرار","تمنراست","عين صالح","تيميمون"]
-FREE_ORAN = ["وهران","oran"]
-ALGIERS = ["الجزائر","الجزائر العاصمة","alger"]
-GROUP_600 = ["البيض","النعامة","بشار","غرداية","الوادي","الاغواط","الأغواط","بسكرة"]
-EXCLUDED = ["تندوف","اليزي","إليزي"]
+def delivery_price(text):
+    w = text.lower()
 
-def delivery_price(wilaya):
-    w = wilaya.strip().lower()
+    if "وهران" in w:
+        return "🚚 التوصيل مجاني"
 
-    if w in FREE_ORAN:
-        return "🚚 التوصيل مجاني 🎁"
+    if "الجزائر" in w:
+        return "🚚 التوصيل 500 دج"
 
-    if w in ALGIERS:
-        return "🚚 التوصيل: 500 دج"
+    south = ["ادرار","تمنراست","عين صالح","تيميمون"]
+    for s in south:
+        if s in w:
+            return "🏠 للدار 1200 دج | 🏢 للمكتب 800 دج"
 
-    if w in SPECIAL_800:
-        return "🏠 للمنزل: 800 دج\n🏢 للمكتب: 50 دج"
-
-    if w in SOUTH_1200:
-        return "🏠 للمنزل: 1200 دج\n🏢 للمكتب: 800 دج"
-
-    if w in GROUP_600:
-        return "🏠 للمنزل: 800 دج\n🏢 للمكتب: 500 دج"
-
-    if w in EXCLUDED:
-        return "⚠️ التوصيل غير متوفر حاليا لهذه الولاية"
+    group800 = ["البيض","النعامة","بشار","غرداية","الوادي","الاغواط","بسكرة","تقرت","توڨرت","المغير"]
+    for g in group800:
+        if g in w:
+            return "🏠 للدار 800 دج | 🏢 للمكتب 50 دج"
 
     return None
 
-# ========= SEND TELEGRAM =========
+# ========= TELEGRAM SEND =========
 def tg_send(chat_id, text):
     requests.post(f"{TELEGRAM_API}/sendMessage", json={
         "chat_id": chat_id,
@@ -59,7 +50,7 @@ def tg_send(chat_id, text):
 def ai_reply(user_text):
 
     if not OPENAI_API_KEY:
-        return "مرحبا 👋 كيف نقدر نعاونك؟"
+        return "مرحبا 👋 تحبي تعرفي السعر ولا التوصيل؟"
 
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -69,10 +60,8 @@ def ai_reply(user_text):
     data = {
         "model": "gpt-4.1-mini",
         "messages": [
-            {
-                "role": "system",
-                "content": "انت بائعة جزائرية في متجر أحذية نسائية اسمه Monkassa. نبيع فقط هذا الحذاء. اقنعي الزبونة بالشراء باختصار."
-            },
+            {"role": "system", "content":
+             "انت بائعة جزائرية في متجر Monkassa للأحذية النسائية. نبيع فقط هذا الحذاء. اجابات قصيرة وتقنع الزبونة بالشراء."},
             {"role": "user", "content": user_text}
         ]
     }
@@ -81,38 +70,42 @@ def ai_reply(user_text):
         r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data, timeout=15)
         return r.json()["choices"][0]["message"]["content"]
     except:
-        return "مرحبا 🌸 تحبي تعرفي السعر ولا التوصيل؟"
+        return "مرحبا 🌸 تحبي تعرفي السعر ولا المقاسات؟"
 
 # ========= MESSAGE LOGIC =========
 def handle_message(text):
-    text_lower = text.lower()
+    t = text.lower()
 
-    for word in text.split():
-        price = delivery_price(word)
-        if price:
-            return f"🚚 اسعار التوصيل لولاية {word}\n{price}"
-    
-# ===== السعر =====
-    if "سعر" in text_lower or "ثمن" in text_lower:
+    # سعر
+    if "سعر" in t or "ثمن" in t:
         return f"💰 سعر {PRODUCT_NAME}: {PRODUCT_PRICE}"
 
-# ===== المقاسات =====
-    if "مقاس" in text_lower or "مقاسات" in text_lower or any(x in text_lower for x in ["36","37","38","39"]):
-        return f"📏 المقاسات المتوفرة: {PRODUCT_SIZES}"
+    # مقاسات
+    if "مقاس" in t or any(x in t for x in ["36","37","38","39"]):
+        return f"📏 المقاسات: {PRODUCT_SIZES}"
 
-# ===== سؤال عن الألوان =====
-    if "لون" in text_lower or "الوان" in text_lower:
-        return f"🎨 الالوان المتوفرة: {PRODUCT_COLORS}"
+    # ألوان
+    if "لون" in t or "الوان" in t:
+        return f"🎨 الالوان: {PRODUCT_COLORS}"
 
-# ===== اختيار اللون مباشر =====
-    if "بلوجين" in text_lower:
-        return "👌 متوفر بلوجين 📦\nاكتب اسمك + الولاية + رقم الهاتف للحجز"
+    if "بلوجين" in t:
+        return "👌 متوفر بلوجين، اكتب اسمك + الولاية + الهاتف للحجز"
 
-    if "اسود" in text_lower or "أسود" in text_lower:
-        return "🖤 متوفر أسود 📦\nاكتب اسمك + الولاية + رقم الهاتف للحجز"
+    if "اسود" in t or "أسود" in t:
+        return "🖤 متوفر أسود، اكتب اسمك + الولاية + الهاتف للحجز"
 
+    # توصيل
+    price = delivery_price(text)
+    if price:
+        return f"🚚 اسعار التوصيل:\n{price}"
 
-# ========= TELEGRAM WEBHOOK =========
+    if "توصيل" in t or "شحن" in t:
+        return "اكتب اسم ولايتك نحسبلك التوصيل 📍"
+
+    # AI
+    return ai_reply(text)
+
+# ================= TELEGRAM =================
 @app.route(f"/{TELEGRAM_TOKEN}", methods=["POST"])
 def telegram_webhook():
     data = request.json
@@ -127,13 +120,8 @@ def telegram_webhook():
 # ================= FACEBOOK VERIFY =================
 @app.route("/facebook", methods=["GET"])
 def facebook_verify():
-    mode = request.args.get("hub.mode")
-    token = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-
-    if mode == "subscribe" and token == "monkassa_verify":
-        return challenge, 200
-
+    if request.args.get("hub.verify_token") == "monkassa_verify":
+        return request.args.get("hub.challenge"), 200
     return "error", 403
 
 # ================= FACEBOOK RECEIVE =================
@@ -141,34 +129,26 @@ def facebook_verify():
 def facebook_webhook():
     data = request.json
 
-    if "entry" not in data:
-        return "ok"
+    if data.get("object") != "page":
+        return "ok", 200
 
-    for entry in data["entry"]:
+    for entry in data.get("entry", []):
         for msg in entry.get("messaging", []):
-
             sender = msg["sender"]["id"]
 
-            if "message" in msg and "text" in msg["message"]:
-                text = msg["message"]["text"]
-                reply = handle_message(text)
+            if msg.get("message") and msg["message"].get("text"):
+                user_text = msg["message"]["text"]
+                reply = handle_message(user_text)
 
                 requests.post(
-                    f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}",
-                    json={
-                        "recipient": {"id": sender},
-                        "message": {"text": reply}
-                    }
+                    "https://graph.facebook.com/v18.0/me/messages",
+                    params={"access_token": PAGE_ACCESS_TOKEN},
+                    json={"recipient": {"id": sender}, "message": {"text": reply}}
                 )
 
-    return "ok"
+    return "ok", 200
 
 # ========= ROOT =========
 @app.route("/")
 def home():
     return "Monkassa bot running"
-import os
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
