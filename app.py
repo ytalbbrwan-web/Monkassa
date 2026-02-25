@@ -74,42 +74,30 @@ def verify():
     return "error", 403
 
 
-# ================== RECEIVE MESSAGE ==================
 @app.route("/facebook", methods=["POST"])
 def receive():
 
     data = request.get_json()
 
-    if "entry" not in data:
+    if data.get("object") != "page":
         return "ok", 200
 
     for entry in data["entry"]:
-        for event in entry.get("messaging", []):
+        for messaging_event in entry.get("messaging", []):
 
-            sender_id = event["sender"]["id"]
+            # ❌ تجاهل رسائل البوت نفسه (echo)
+            if messaging_event.get("message") and messaging_event["message"].get("is_echo"):
+                return "ok", 200
 
-            # ===== رسالة نصية =====
-            if event.get("message") and event["message"].get("text"):
-                user_text = event["message"]["text"]
+            sender_id = messaging_event["sender"]["id"]
+
+            if messaging_event.get("message") and messaging_event["message"].get("text"):
+                user_text = messaging_event["message"]["text"]
+
                 reply = ai_reply(user_text)
                 send_message(sender_id, reply)
 
-            # ===== ضغط زر =====
-            elif event.get("postback"):
-                send_message(sender_id, "مرحبا 🌸 تحبي السعر ولا المقاسات؟")
-
-            # ===== فتح المحادثة فقط =====
-            else:
-                send_message(sender_id, "مرحبا 🌸 مرحبا بيك في متجر Monkassa")
-
     return "ok", 200
-
-
-# ================== HOME ==================
-@app.route("/")
-def home():
-    return "Monkassa Facebook Bot Running"
-
 
 # ================== RUN ==================
 if __name__ == "__main__":
