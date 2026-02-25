@@ -1,4 +1,3 @@
-
 from flask import Flask, request
 import requests
 import os
@@ -15,7 +14,6 @@ PRODUCT_PRICE = "3500 دج"
 PRODUCT_SIZES = "36 37 38 39"
 PRODUCT_COLORS = "أسود - بلوجين"
 
-
 # ================== AI RESPONSE ==================
 def ai_reply(user_text):
 
@@ -29,14 +27,7 @@ def ai_reply(user_text):
         "messages": [
             {
                 "role": "system",
-                "content": """
-انت بائعة جزائرية لطيفة في متجر أحذية نسائية اسمه Monkassa.
-مهم جدا:
-- لا تذكر السعر نهائيا
-- لا تخترع أرقام
-- إذا سُئلت عن السعر قولي: سأتحقق لك من السعر
-- اجعلي الرد قصير لإقناع الزبونة فقط
-"""
+                "content": "انت بائعة جزائرية لطيفة في متجر أحذية نسائية اسمه Monkassa. نبيع حذاء واحد فقط. اجابات قصيرة واقناعية."
             },
             {
                 "role": "user",
@@ -46,13 +37,16 @@ def ai_reply(user_text):
     }
 
     try:
-        r = requests.post("https://api.openai.com/v1/chat/completions",
-                          headers=headers, json=data, timeout=20)
-
+        r = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=20
+        )
         return r.json()["choices"][0]["message"]["content"]
 
     except:
-        return "مرحبا 🌸 تحبي تعرفي المقاسات ولا الألوان؟"
+        return "مرحبا 🌸 تحبي تعرفي السعر ولا المقاسات؟"
 
 # ================== SEND MESSAGE ==================
 def send_message(psid, text):
@@ -66,15 +60,16 @@ def send_message(psid, text):
 
     requests.post(url, json=payload)
 
-
 # ================== VERIFY ==================
 @app.route("/facebook", methods=["GET"])
 def verify():
+
     if request.args.get("hub.mode") == "subscribe" and request.args.get("hub.verify_token") == VERIFY_TOKEN:
         return request.args.get("hub.challenge"), 200
+
     return "error", 403
 
-
+# ================== RECEIVE MESSAGE ==================
 @app.route("/facebook", methods=["POST"])
 def receive():
 
@@ -86,19 +81,35 @@ def receive():
     for entry in data["entry"]:
         for messaging_event in entry.get("messaging", []):
 
-            # ❌ تجاهل رسائل البوت نفسه (echo)
-            if messaging_event.get("message") and messaging_event["message"].get("is_echo"):
-                return "ok", 200
+            # تجاهل echo (باش مايديرش سبام)
+            if messaging_event.get("message", {}).get("is_echo"):
+                continue
 
             sender_id = messaging_event["sender"]["id"]
 
-            if messaging_event.get("message") and messaging_event["message"].get("text"):
-                user_text = messaging_event["message"]["text"]
+            if "message" in messaging_event and "text" in messaging_event["message"]:
+                user_text = messaging_event["message"]["text"].lower()
 
-                reply = ai_reply(user_text)
+                if "سعر" in user_text or "ثمن" in user_text or "price" in user_text:
+                    reply = f"💰 سعر {PRODUCT_NAME} هو {PRODUCT_PRICE}\n🚚 توصيل متوفر لكل الولايات"
+
+                elif "مقاس" in user_text:
+                    reply = f"📏 المقاسات المتوفرة: {PRODUCT_SIZES}"
+
+                elif "لون" in user_text:
+                    reply = f"🎨 الألوان المتوفرة: {PRODUCT_COLORS}"
+
+                else:
+                    reply = ai_reply(user_text)
+
                 send_message(sender_id, reply)
 
     return "ok", 200
+
+# ================== HOME ==================
+@app.route("/")
+def home():
+    return "Monkassa Facebook Bot Running"
 
 # ================== RUN ==================
 if __name__ == "__main__":
