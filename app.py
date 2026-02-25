@@ -29,29 +29,30 @@ def ai_reply(user_text):
         "messages": [
             {
                 "role": "system",
-                "content": "انت بائعة جزائرية لطيفة في متجر أحذية نسائية اسم المتجر Monkassa. اجاباتك قصيرة وتقنع الزبونة بالشراء."
+                "content": """
+انت بائعة جزائرية لطيفة في متجر أحذية نسائية اسمه Monkassa.
+مهم جدا:
+- لا تذكر السعر نهائيا
+- لا تخترع أرقام
+- إذا سُئلت عن السعر قولي: سأتحقق لك من السعر
+- اجعلي الرد قصير لإقناع الزبونة فقط
+"""
             },
-            {"role": "user", "content": user_text}
+            {
+                "role": "user",
+                "content": user_text
+            }
         ]
     }
 
     try:
-        r = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=20
-        )
+        r = requests.post("https://api.openai.com/v1/chat/completions",
+                          headers=headers, json=data, timeout=20)
+
         return r.json()["choices"][0]["message"]["content"]
 
     except:
-        return f"""مرحبا 🌸
-{PRODUCT_NAME}
-السعر: {PRODUCT_PRICE}
-المقاسات: {PRODUCT_SIZES}
-الألوان: {PRODUCT_COLORS}
-تحبي نحجزلك؟"""
-
+        return "مرحبا 🌸 تحبي تعرفي المقاسات ولا الألوان؟"
 
 # ================== SEND MESSAGE ==================
 def send_message(psid, text):
