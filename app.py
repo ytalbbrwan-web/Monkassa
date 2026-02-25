@@ -11,7 +11,7 @@ PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
 
 PRODUCT_NAME = "حذاء Monkassa الطبي"
-PRODUCT_PRICE = "4500 دج"
+PRODUCT_PRICE = "3500 دج"
 PRODUCT_SIZES = "36 37 38 39"
 PRODUCT_COLORS = "أسود - بلوجين"
 
