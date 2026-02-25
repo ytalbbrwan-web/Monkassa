@@ -116,8 +116,6 @@ if "توصيل" in user_text or "شحن" in user_text:
     else:
         reply = "🚚 التوصيل لباقي الولايات:\n🏠 للمنزل: 600 دج\n🏢 للمكتب: 400 دج"
 
-    send_message(sender_id, reply)
-    return "ok", 200
                 if "سعر" in user_text or "ثمن" in user_text or "price" in user_text:
                     reply = f"💰 سعر {PRODUCT_NAME} هو {PRODUCT_PRICE}\n🚚 توصيل متوفر لكل الولايات"
 
