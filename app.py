@@ -116,17 +116,17 @@ if "توصيل" in user_text or "شحن" in user_text:
     else:
         reply = "🚚 التوصيل لباقي الولايات:\n🏠 للمنزل: 600 دج\n🏢 للمكتب: 400 دج"
 
-                if "سعر" in user_text or "ثمن" in user_text or "price" in user_text:
-                    reply = f"💰 سعر {PRODUCT_NAME} هو {PRODUCT_PRICE}\n🚚 توصيل متوفر لكل الولايات"
+    if "سعر" in user_text or "ثمن" in user_text or "price" in user_text:
+        reply = f"💰 سعر {PRODUCT_NAME} هو {PRODUCT_PRICE}\n🚚 توصيل متوفر لكل الولايات"
 
-                elif "مقاس" in user_text:
-                    reply = f"📏 المقاسات المتوفرة: {PRODUCT_SIZES}"
+    elif "مقاس" in user_text:
+        reply = f"📏 المقاسات المتوفرة: {PRODUCT_SIZES}"
 
-                elif "لون" in user_text:
-                    reply = f"🎨 الألوان المتوفرة: {PRODUCT_COLORS}"
+    elif "لون" in user_text:
+        reply = f"🎨 الألوان المتوفرة: {PRODUCT_COLORS}"
 
-                else:
-                    reply = ai_reply(user_text)
+    else:
+       reply = ai_reply(user_text)
 
                 send_message(sender_id, reply)
 
