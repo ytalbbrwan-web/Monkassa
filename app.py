@@ -127,7 +127,7 @@ if "توصيل" in user_text or "شحن" in user_text:
     else:
        reply = ai_reply(user_text)
 
-                send_message(sender_id, reply)
+    send_message(sender_id, reply)
 
     return "ok", 200
 
