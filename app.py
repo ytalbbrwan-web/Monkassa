@@ -125,10 +125,9 @@ if "توصيل" in user_text or "شحن" in user_text:
         reply = "🚚 التوصيل لباقي ولايات الجزائر:\n🏠 للمنزل: 600 دج\n🏢 للمكتب: 400 دج"
    
     else:
-       reply = ai_reply(user_text)
+        reply = ai_reply(user_text)
 
-    send_message(sender_id, reply)
-
+        send_message(sender_id, reply)
         return "ok", 200
 
 # ================== HOME ==================
