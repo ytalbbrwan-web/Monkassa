@@ -1,6 +1,6 @@
 import requests
 
-OPENAI_API_KEY = "ضع_مفتاحك_هنا"
+OPENAI_API_KEY = "7973029583:AAHLIdAGHx4pGsb7V4f6us3JdUcs5hncXPM"
 
 def analyze(product):
 
