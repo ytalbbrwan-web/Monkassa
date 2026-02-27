@@ -1,78 +1,65 @@
+import os
+import requests
+from openai import OpenAI
+from pytrends.request import TrendReq
 import random
 
-# قاعدة بيانات أفكار (سيختار منها الذكاء الاصطناعي)
-PRODUCT_DATABASE = {
-    "women": [
-        "حذاء مريح مضاد للتعرق",
-        "حذاء طويل يزيد الطول بدون كعب ظاهر",
-        "حذاء للمشي الطويل بدون ألم",
-        "حذاء أنيق للعمل اليومي",
-        "حذاء خفيف للسفر"
-    ],
-    "men": [
-        "حذاء رياضي مريح للوقوف الطويل",
-        "حذاء كلاسيك خفيف",
-        "حذاء يزيد الطول 4 سم",
-        "حذاء بدون رائحة",
-        "حذاء شبابي خفيف"
-    ],
-    "health": [
-        "دعامة تصحيح تقوس القدم",
-        "نعل طبي مضاد للتعرق",
-        "وسادة كعب سيليكون",
-        "جوارب مانعة للرائحة",
-        "لاصق حماية القدم"
-    ],
-    "trend": [
-        "منتج تيك توك ترند جديد",
-        "منتج نسائي سريع الانتشار",
-        "اكسسوار بسيط مطلوب بقوة",
-        "منتج رخيص عالي الطلب",
-        "منتج يومي استهلاكي"
-    ]
-}
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 
-def ai_find_product(budget, audience, problem):
+def get_trending_keywords():
+    pytrend = TrendReq()
+    pytrend.build_payload(
+        kw_list=["health", "beauty", "fitness", "home gadget"],
+        timeframe="now 7-d"
+    )
+
+    related = pytrend.related_queries()
+    trends = []
+
+    for key in related:
+        if related[key]["top"] is not None:
+            for item in related[key]["top"]["query"][:3]:
+                trends.append(item)
+
+    return trends[:5]
+
+
+def analyze_with_ai(trends):
+
+    prompt = f"""
+    هذه كلمات ترند حالياً:
+    {trends}
+
+    حلل السوق واقترح 5 منتجات مربحة جداً.
+    لكل منتج اذكر:
+    - سبب الربح
+    - سعر الشراء التقريبي
+    - سعر البيع
+    - هامش الربح
+    - درجة المنافسة /10
+    - نسبة النجاح /10
     """
-    budget: 2000 - 10000
-    audience: women / men / all
-    problem: وجع قدم / تعرق / أناقة / زيادة طول / ترند
-    """
 
-    # اختيار المجال المناسب
-    if problem in ["وجع", "الم", "تقوس", "تعب"]:
-        category = "health"
+    res = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[{"role":"user","content":prompt}]
+    )
 
-    elif problem in ["أناقة", "جمال", "ستايل"]:
-        category = "women" if audience == "women" else "men"
+    return res.choices[0].message.content
 
-    elif problem in ["طول", "قصير"]:
-        category = "men"
 
-    elif problem in ["ترند", "viral"]:
-        category = "trend"
+def send_telegram(text):
+    requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        json={"chat_id":CHAT_ID,"text":text}
+    )
 
-    else:
-        category = random.choice(list(PRODUCT_DATABASE.keys()))
 
-    product = random.choice(PRODUCT_DATABASE[category])
-
-    # حساب سعر البيع المقترح
-    sell_price = budget * 2.2
-
-    return f"""
-📊 تحليل السوق:
-
-👥 الفئة المستهدفة: {audience}
-💡 المشكلة: {problem}
-
-🏆 المنتج المقترح:
-{product}
-
-💰 تشتريه بـ: {budget} دج
-💸 تبيعه بـ: {int(sell_price)} دج
-
-🔥 هامش الربح: {int(sell_price - budget)} دج
-🚀 قابل للنجاح في السوق
-"""
+if __name__ == "__main__":
+    trends = get_trending_keywords()
+    report = analyze_with_ai(trends)
+    send_telegram(report)
