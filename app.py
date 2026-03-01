@@ -14,39 +14,6 @@ PRODUCT_PRICE = "3500 دج"
 PRODUCT_SIZES = "36 37 38 39"
 PRODUCT_COLORS = "أسود - بلوجين"
 
-# ================== AI RESPONSE ==================
-def ai_reply(user_text):
-
-    headers = {
-        "Authorization": f"Bearer {OPENAI_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    data = {
-        "model": "gpt-4o-mini",
-        "messages": [
-            {
-                "role": "system",
-                "content": "انت بائعة جزائرية لطيفة في متجر أحذية نسائية اسمه Monkassa. نبيع حذاء واحد فقط. اجابات قصيرة واقناعية."
-            },
-            {
-                "role": "user",
-                "content": user_text
-            }
-        ]
-    }
-
-    try:
-        r = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=20
-        )
-        return r.json()["choices"][0]["message"]["content"]
-
-    except:
-        return "مرحبا 🌸 تحبي تعرفي السعر ولا المقاسات؟"
 
 # ================== SEND MESSAGE ==================
 def send_message(psid, text):
