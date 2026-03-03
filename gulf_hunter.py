@@ -1,80 +1,50 @@
 import os
-import datetime
 import requests
+from flask import Flask, request
 from openai import OpenAI
 
-# ==============================
-# CONFIG
-# ==============================
-
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# 🔑 Environment Variables
+TOKEN = os.environ.get("TELEGRAM_TOKEN")
+CHAT_ID = os.environ.get("CHAT_ID")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+app = Flask(__name__)
 
-# ==============================
-# SEND TELEGRAM MESSAGE
-# ==============================
+def send_message(chat_id, text):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    requests.post(url, json={
+        "chat_id": chat_id,
+        "text": text
+    })
 
-def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {
-        "chat_id": CHAT_ID,
-        "text": message
-    }
-    requests.post(url, data=data)
+@app.route("/", methods=["GET"])
+def home():
+    return "AI Bot Running"
 
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.json
 
-# ==============================
-# GENERATE PRODUCT REPORT
-# ==============================
+    if "message" in data:
+        chat_id = data["message"]["chat"]["id"]
+        user_text = data["message"].get("text", "")
 
-def generate_report(season):
+        # 🧠 AI Response
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "أنت خبير في إيجاد منتجات رابحة في الخليج."},
+                {"role": "user", "content": user_text}
+            ]
+        )
 
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
+        ai_reply = response.choices[0].message.content
 
-    prompt = f"""
-    ابحث عن 5 منتجات رابحة في السوق الخليجي (السعودية - الإمارات - قطر - الكويت)
-    مرتبطة بموسم: {season}
+        send_message(chat_id, ai_reply)
 
-    لكل منتج اعطني:
-
-    - اسم المنتج
-    - لماذا عليه طلب
-    - سعر الجملة التقريبي من الصين (دولار)
-    - سعر البيع المقترح في الخليج (بالريال السعودي)
-    - هامش الربح المتوقع
-    - درجة المنافسة /10
-    - هل يصلح COD
-
-    اجعل التقرير واضح ومرتب.
-    """
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "أنت خبير تجارة إلكترونية في الخليج"},
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    return f"📊 تقرير المنتجات - {today}\n\n" + response.choices[0].message.content
-
-
-# ==============================
-# MAIN
-# ==============================
+    return "ok"
 
 if __name__ == "__main__":
-
-    season = input("اكتب الموسم (مثال: رمضان / صيف / مدارس / شتاء): ")
-
-    report = generate_report(season)
-
-    print(report)
-
-    if TELEGRAM_TOKEN and CHAT_ID:
-        send_telegram(report)
-        print("\n✅ تم إرسال التقرير إلى تيليغرام")
+    app.run(host="0.0.0.0", port=10000)
