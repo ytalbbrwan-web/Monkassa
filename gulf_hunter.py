@@ -1,65 +1,80 @@
-import requests
+import os
 import datetime
+import requests
+from openai import OpenAI
 
-# ========= CONFIG =========
-OPENAI_KEY = "PUT_OPENAI_KEY"
-TELEGRAM_TOKEN = "7973029583:AAHLIdAGHx4pGsb7V4f6us3JdUcs5hncXPM"
-CHAT_ID = "1950592877"
+# ==============================
+# CONFIG
+# ==============================
 
-# ========= SEND TELEGRAM =========
-def send_telegram(text):
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+
+# ==============================
+# SEND TELEGRAM MESSAGE
+# ==============================
+
+def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={
+    data = {
         "chat_id": CHAT_ID,
-        "text": text
-    })
+        "text": message
+    }
+    requests.post(url, data=data)
 
-# ========= AI PRODUCT HUNTER =========
-def generate_report():
 
-    now = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
+# ==============================
+# GENERATE PRODUCT REPORT
+# ==============================
+
+def generate_report(season):
+
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
 
     prompt = f"""
-انت خبير تجارة إلكترونية في الخليج (السعودية، الإمارات، الكويت، قطر، البحرين، عمان).
+    ابحث عن 5 منتجات رابحة في السوق الخليجي (السعودية - الإمارات - قطر - الكويت)
+    مرتبطة بموسم: {season}
 
-اعطني 5 منتجات مربحة حالياً في الخليج.
+    لكل منتج اعطني:
 
-لكل منتج اعطني:
-- اسم المنتج
-- لماذا مطلوب في الخليج
-- سعر شراء تقديري بالدولار
-- سعر بيع مناسب بالريال السعودي
-- هامش الربح التقريبي
-- سكريبت إعلان قصير (15 ثانية)
-- اسم براند مقترح
+    - اسم المنتج
+    - لماذا عليه طلب
+    - سعر الجملة التقريبي من الصين (دولار)
+    - سعر البيع المقترح في الخليج (بالريال السعودي)
+    - هامش الربح المتوقع
+    - درجة المنافسة /10
+    - هل يصلح COD
 
-ركز على منتجات سهلة الشحن وقابلة للإعلان في تيك توك.
-"""
+    اجعل التقرير واضح ومرتب.
+    """
 
-    headers = {
-        "Authorization": f"Bearer {OPENAI_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    data = {
-        "model": "gpt-4.1-mini",
-        "messages": [
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "أنت خبير تجارة إلكترونية في الخليج"},
             {"role": "user", "content": prompt}
         ]
-    }
-
-    r = requests.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers=headers,
-        json=data,
-        timeout=60
     )
 
-    result = r.json()["choices"][0]["message"]["content"]
+    return f"📊 تقرير المنتجات - {today}\n\n" + response.choices[0].message.content
 
-    final_report = f"🔥 Gulf Product Report\n🕒 {now}\n\n{result}"
 
-    send_telegram(final_report)
+# ==============================
+# MAIN
+# ==============================
 
-# ========= RUN =========
-generate_report()
+if __name__ == "__main__":
+
+    season = input("اكتب الموسم (مثال: رمضان / صيف / مدارس / شتاء): ")
+
+    report = generate_report(season)
+
+    print(report)
+
+    if TELEGRAM_TOKEN and CHAT_ID:
+        send_telegram(report)
+        print("\n✅ تم إرسال التقرير إلى تيليغرام")
