@@ -185,7 +185,7 @@ def webhook():
                     ctr = stats.get("ctr","0")
                     cpc = stats.get("cpc","0")
                     spend = stats.get("spend","0")
-
+                    analysis = ai_ads_analysis(c['name'], ctr, cpc, spend)
                     report += f"""
 🎯 {c['name']}
 
