@@ -101,7 +101,52 @@ def analyze_campaign(campaign_id):
 
     return data["data"][0]
 
+# ====== ANALYZE CAMPAIGN ======
+def analyze_campaign(campaign_id):
 
+    url = f"https://graph.facebook.com/v19.0/{campaign_id}/insights"
+
+    params = {
+        "fields": "impressions,clicks,ctr,cpc,spend",
+        "access_token": FACEBOOK_TOKEN
+    }
+
+    r = requests.get(url, params=params)
+
+    data = r.json()
+
+    if "data" not in data or len(data["data"]) == 0:
+        return None
+
+    return data["data"][0]
+
+
+# ====== AI ADS ANALYSIS ======
+def ai_ads_analysis(name, ctr, cpc, spend):
+
+    prompt = f"""
+    حلل هذه الحملة الاعلانية:
+
+    اسم الحملة: {name}
+    CTR: {ctr}
+    CPC: {cpc}
+    Spend: {spend}
+
+    قل لي:
+    - هل الحملة ناجحة او فاشلة
+    - ما المشكلة
+    - كيف اطورها
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role":"system","content":"انت خبير اعلانات فيسبوك"},
+            {"role":"user","content":prompt}
+        ]
+    )
+
+    return response.choices[0].message.content
 # ====== WEBHOOK ======
 @app.route('/webhook', methods=['POST'])
 def webhook():
