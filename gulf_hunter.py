@@ -174,7 +174,7 @@ def webhook():
 
             else:
 
-                report = "📊 تحليل الحملات\n\n"
+                report += "📊 تحليل الحملات\n\n"
 
                 for c in campaigns:
 
