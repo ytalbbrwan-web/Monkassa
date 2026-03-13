@@ -132,7 +132,7 @@ def ai_ads_analysis(name, ctr, cpc, spend):
     CTR: {ctr}
     CPC: {cpc}
     Spend: {spend}
-
+    
     قل لي:
     - هل الحملة ناجحة او فاشلة
     - ما المشكلة
@@ -193,8 +193,11 @@ def webhook():
 CTR : {ctr} %
 CPC : {cpc} $
 Spend : {spend} $
+تحليل الذكاء الاصطناعي:
+{analysis}
 
 """
+
 
                 send_message(chat_id,report)
 
