@@ -16,6 +16,7 @@ app = Flask(__name__)
 AD_ACCOUNTS = [
 "act_1432813163902616",
 "act_791862618472529"
+"act_3764369860471013"
 ]
 
 # ====== SEND MESSAGE TO TELEGRAM ======
