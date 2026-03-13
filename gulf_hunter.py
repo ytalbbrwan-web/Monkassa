@@ -62,7 +62,7 @@ def get_campaigns():
 
     for account in AD_ACCOUNTS:
 
-        url = f"https://graph.facebook.com/v19.0/{account}/campaigns"
+        url = f"https://graph.facebook.com/v18.0/{account}/campaigns?fields=name,status&limit=50"
 
         params = {
             "fields": "name,status,id",
